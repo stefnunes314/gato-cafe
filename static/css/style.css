@@ -1,0 +1,19 @@
+:root { --cafe: #4A2C2A; --creme: #FDF8F5; }
+body { background: var(--creme); color: #2b1a19; }
+.navbar-gato { background: var(--cafe); }
+.navbar-gato .navbar-brand, .navbar-gato .nav-link { color: var(--creme); }
+.btn-cafe { background: var(--cafe); border-color: var(--cafe); color: var(--creme); }
+.btn-cafe:hover { background: #351f1d; color: #fff; }
+.btn-outline-cafe { border-color: var(--cafe); color: var(--cafe); }
+.btn-outline-cafe:hover { background: var(--cafe); color: var(--creme); }
+.nav-tabs .nav-link { color: var(--cafe); }
+.nav-tabs .nav-link.active { background: var(--cafe); color: var(--creme); border-color: var(--cafe); }
+.card { border-color: #e9dcd5; }
+.card-header-cafe { background: var(--cafe); color: var(--creme); }
+.preco { color: var(--cafe); font-weight: 700; }
+.emoji-gato { font-size: 3rem; }
+.foto-gato { height: 200px; object-fit: cover; }
+.icone-categoria { font-size: 2rem; line-height: 1; }
+.footer-gato { background: var(--cafe); color: var(--creme); }
+.footer-gato a { color: var(--creme); }
+select option:disabled { color: #aaa; }

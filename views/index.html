@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block content %}
+<ul class="nav nav-tabs mb-4" id="abas" role="tablist">
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cardapio" type="button">☕ Cardápio</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#gatos" type="button">🐈 Gatos</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#carrinho" type="button">
+    🛒 Carrinho <span class="badge bg-secondary">{{ carrinho.quantidade }}</span></button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#gatoterapia" type="button">🧶 Gatoterapia</button></li>
+</ul>
+
+<div class="tab-content">
+  <!-- Cardápio -->
+  <div class="tab-pane fade" id="cardapio">
+    <div class="mb-3 d-flex flex-wrap gap-2">
+      <a class="btn btn-sm {{ 'btn-cafe' if not categoria_ativa else 'btn-outline-cafe' }}" href="{{ url_for('index') }}#cardapio">Todos</a>
+      {% for c in categorias %}
+      <a class="btn btn-sm {{ 'btn-cafe' if c == categoria_ativa else 'btn-outline-cafe' }}"
+         href="{{ url_for('index', categoria=c) }}#cardapio">{{ c }}</a>
+      {% endfor %}
+    </div>
+    <div class="row g-3">
+      {% for p in produtos %}
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100"><div class="card-body d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="badge bg-light text-dark">{{ p.categoria }}</span>
+            <span class="icone-categoria" aria-hidden="true">{{ icones.get(p.categoria, '') }}</span>
+          </div>
+          <h5 class="card-title">{{ p.nome }}</h5>
+          <p class="card-text text-muted flex-grow-1">{{ p.descricao }}</p>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="preco">{{ p.preco|brl }}</span>
+            <form method="post" action="{{ url_for('carrinho', acao='add', produto_id=p.id) }}">
+              <input type="hidden" name="categoria" value="{{ categoria_ativa or '' }}">
+              <button class="btn btn-cafe btn-sm">Adicionar</button>
+            </form>
+          </div>
+        </div></div>
+      </div>
+      {% else %}<p class="text-muted">Nenhum produto nesta categoria.</p>{% endfor %}
+    </div>
+  </div>
+
+  <!-- Gatos -->
+  <div class="tab-pane fade" id="gatos">
+    <div class="row g-3">
+      {% for g in gatos %}
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="card h-100 text-center">
+          {% if g.foto %}
+          <img src="{{ url_for('static', filename='img/gatos/' ~ g.foto) }}" class="card-img-top foto-gato" alt="Foto do gato {{ g.nome }}">
+          {% else %}
+          <div class="emoji-gato pt-3">🐱</div>
+          {% endif %}
+          <div class="card-body d-flex flex-column">
+          <h5 class="card-title">{{ g.nome }}</h5>
+          <p class="mb-1"><strong>Idade:</strong> {{ g.idade }}</p>
+          <p class="mb-1"><strong>Temperamento:</strong> {{ g.temperamento }}</p>
+          <p class="mb-2"><strong>ONG:</strong> {{ g.ong_parceira }}</p>
+          <span class="badge align-self-center {{ {'Disponível': 'bg-success', 'Em processo': 'bg-warning text-dark', 'Adotado': 'bg-secondary'}[g.status_adocao] }}">{{ g.status_adocao }}</span>
+          {% if g.status_adocao == 'Disponível' %}
+          <button type="button" class="btn btn-cafe btn-sm mt-3" data-bs-toggle="modal" data-bs-target="#adotar-{{ g.id }}">💛 Quero adotar</button>
+          {% endif %}
+        </div></div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% for g in gatos if g.status_adocao == 'Disponível' %}
+    {% set ong = ongs.get(g.ong_parceira, {}) %}
+    <div class="modal fade" id="adotar-{{ g.id }}" tabindex="-1" aria-labelledby="adotar-titulo-{{ g.id }}" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header card-header-cafe">
+          <h5 class="modal-title" id="adotar-titulo-{{ g.id }}">Adotar {{ g.nome }}</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <p>Que bom que você quer dar um lar para o(a) <strong>{{ g.nome }}</strong>! Veja como funciona:</p>
+          <ol>
+            <li>Entre em contato com a <strong>{{ g.ong_parceira }}</strong>.</li>
+            <li>Preencha a entrevista de adoção responsável.</li>
+            <li>Agende uma visita para conhecer {{ g.nome }} na sala dos gatos.</li>
+            <li>Após aprovação, assine o termo de adoção.</li>
+          </ol>
+          {% if ong %}
+          <div class="p-3 rounded bg-light">
+            <p class="mb-1">📞 {{ ong.telefone }}</p>
+            <p class="mb-1">✉️ {{ ong.email }}</p>
+            <p class="mb-0">📷 {{ ong.instagram }}</p>
+          </div>
+          {% endif %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-cafe" data-bs-dismiss="modal">Fechar</button>
+          <button type="button" class="btn btn-cafe" data-bs-dismiss="modal" onclick="mostrarAba('gatoterapia')">Agendar visita</button>
+        </div>
+      </div></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Carrinho -->
+  <div class="tab-pane fade" id="carrinho">
+    {% if carrinho.itens %}
+    <div class="table-responsive">
+      <table class="table align-middle bg-white">
+        <thead><tr><th>Item</th><th>Preço</th><th class="text-center">Qtd</th><th>Subtotal</th><th></th></tr></thead>
+        <tbody>
+        {% for i in carrinho.itens %}
+          <tr>
+            <td>{{ i.nome }}</td>
+            <td>{{ i.preco_unitario|brl }}</td>
+            <td class="text-center text-nowrap">
+              <form class="d-inline" method="post" action="{{ url_for('carrinho', acao='dec', produto_id=i.produto_id) }}"><button class="btn btn-outline-cafe btn-sm" aria-label="Diminuir">−</button></form>
+              <span class="mx-2">{{ i.quantidade }}</span>
+              <form class="d-inline" method="post" action="{{ url_for('carrinho', acao='inc', produto_id=i.produto_id) }}"><button class="btn btn-outline-cafe btn-sm" aria-label="Aumentar">+</button></form>
+            </td>
+            <td>{{ i.subtotal|brl }}</td>
+            <td><form method="post" action="{{ url_for('carrinho', acao='remove', produto_id=i.produto_id) }}"><button class="btn btn-outline-danger btn-sm">Remover</button></form></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot><tr><th colspan="3" class="text-end">Subtotal</th><th colspan="2">{{ carrinho.subtotal|brl }}</th></tr></tfoot>
+      </table>
+    </div>
+    <div class="d-flex flex-wrap gap-2 mb-4">
+      <form method="post" action="{{ url_for('carrinho', acao='limpar') }}"><button class="btn btn-outline-danger btn-sm">Limpar carrinho</button></form>
+      <form method="post" action="{{ url_for('carrinho', acao='modalidade') }}" class="d-flex gap-2">
+        <select name="modalidade" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Modalidade">
+          {% for m in modalidades %}<option {{ 'selected' if m == carrinho.modalidade }}>{{ m }}</option>{% endfor %}
+        </select>
+      </form>
+    </div>
+
+    <div class="card"><div class="card-header card-header-cafe">Checkout ({{ carrinho.modalidade }})</div>
+    <form class="card-body row g-3" method="post" action="{{ url_for('checkout') }}">
+      <div class="col-md-6"><label class="form-label" for="c-nome">Nome *</label><input id="c-nome" name="nome" class="form-control" required></div>
+      <div class="col-md-6"><label class="form-label" for="c-tel">Telefone *</label><input id="c-tel" name="telefone" class="form-control" required inputmode="tel" placeholder="(11) 91234-5678"></div>
+      {% if carrinho.modalidade == 'Delivery' %}
+      <div class="col-12"><label class="form-label" for="c-end">Endereço de entrega *</label><input id="c-end" name="endereco" class="form-control" required></div>
+      {% endif %}
+      <div class="col-12">
+        <label class="form-label d-block">Pagamento</label>
+        {% for f in pagamentos %}
+        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="pagamento" id="pg{{ loop.index }}" value="{{ f }}" {{ 'checked' if loop.first }}><label class="form-check-label" for="pg{{ loop.index }}">{{ f }}</label></div>
+        {% endfor %}
+        <div class="form-text">Pagamento simulado: nenhum dado de cartão é coletado.</div>
+      </div>
+      <div class="col-12"><button class="btn btn-cafe">Pagar {{ carrinho.subtotal|brl }}</button></div>
+    </form></div>
+    {% else %}
+    <p class="text-muted">Seu carrinho está vazio. Escolha algo no <a href="#cardapio" onclick="mostrarAba('cardapio')">cardápio</a>.</p>
+    {% endif %}
+  </div>
+
+  <!-- Gatoterapia -->
+  <div class="tab-pane fade" id="gatoterapia">
+    <div class="card"><div class="card-header card-header-cafe">Agendar sessão na sala dos gatos</div>
+    <form class="card-body row g-3" method="post" action="{{ url_for('reservas') }}">
+      <div class="col-md-6"><label class="form-label" for="r-nome">Nome *</label><input id="r-nome" name="nome" class="form-control" required></div>
+      <div class="col-md-6"><label class="form-label" for="r-tel">Telefone *</label><input id="r-tel" name="telefone" class="form-control" required inputmode="tel"></div>
+      <div class="col-md-4"><label class="form-label" for="r-data">Data *</label><input id="r-data" type="date" name="data" class="form-control" min="{{ reserva.hoje }}" required></div>
+      <div class="col-md-4"><label class="form-label" for="r-hor">Horário *</label>
+        <select id="r-hor" name="horario" class="form-select" required>
+          {% for c in reserva.capacidades %}<option value="{{ c.horario }}">{{ c.horario }}</option>{% endfor %}
+        </select></div>
+      <div class="col-md-4"><label class="form-label" for="r-qtd">Pessoas *</label><input id="r-qtd" type="number" name="qtd" class="form-control" min="1" max="{{ reserva.max_pessoas }}" value="1" required></div>
+      <div class="col-12"><p class="mb-1">Cat Fee: <strong id="cat-fee">{{ reserva.cat_fee|brl }}</strong> ({{ reserva.cat_fee|brl }} por pessoa)</p>
+        <p class="text-muted small mb-0" id="vagas-info"></p></div>
+      <div class="col-12"><button class="btn btn-cafe" id="btn-reserva">Confirmar reserva</button></div>
+    </form></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const ABA_KEY = 'gatocafe.aba';
+  function mostrarAba(id) {
+    const btn = document.querySelector(`[data-bs-target="#${id}"]`);
+    if (btn) bootstrap.Tab.getOrCreateInstance(btn).show();
+  }
+  // Persistência de estado: hash da URL, depois localStorage, senão cardápio.
+  const inicial = location.hash.slice(1) || localStorage.getItem(ABA_KEY) || 'cardapio';
+  mostrarAba(document.getElementById(inicial) ? inicial : 'cardapio');
+  document.querySelectorAll('#abas [data-bs-toggle="tab"]').forEach(b =>
+    b.addEventListener('shown.bs.tab', e => {
+      const id = e.target.dataset.bsTarget.slice(1);
+      localStorage.setItem(ABA_KEY, id);
+      history.replaceState(null, '', '#' + id);
+    }));
+
+  // Cat Fee e vagas em tempo real
+  const FEE = {{ reserva.cat_fee }};
+  const qtd = document.getElementById('r-qtd'), data = document.getElementById('r-data');
+  const fmt = v => 'R$ ' + v.toFixed(2).replace('.', ',');
+  qtd.addEventListener('input', () => {
+    document.getElementById('cat-fee').textContent = fmt(FEE * (parseInt(qtd.value) || 0));
+  });
+  // Mostra vagas em cada horário e bloqueia os esgotados
+  const selHorario = document.getElementById('r-hor');
+  const btnReserva = document.getElementById('btn-reserva');
+  async function atualizarVagas() {
+    const info = document.getElementById('vagas-info');
+    const opcoes = [...selHorario.options];
+    opcoes.forEach(o => { o.disabled = false; o.textContent = o.value; });
+    btnReserva.disabled = false;
+    info.textContent = '';
+    if (!data.value) return;
+    const r = await fetch('/api/vagas?data=' + encodeURIComponent(data.value));
+    const j = await r.json();
+    if (!r.ok) { info.textContent = j.erro; return; }
+    const pessoas = parseInt(qtd.value) || 1;
+    opcoes.forEach(o => {
+      const v = j[o.value] ?? 0;
+      o.textContent = v === 0 ? `${o.value} — esgotado` : `${o.value} (${v} vaga${v > 1 ? 's' : ''})`;
+      o.disabled = v < pessoas;
+    });
+    if (selHorario.selectedOptions[0]?.disabled) {
+      const livre = opcoes.find(o => !o.disabled);
+      if (livre) selHorario.value = livre.value;
+    }
+    if (opcoes.every(o => o.disabled)) {
+      info.textContent = `Nenhum horário com ${pessoas} vaga(s) nesta data. Escolha outra data.`;
+      btnReserva.disabled = true;
+    }
+  }
+  data.addEventListener('change', atualizarVagas);
+  qtd.addEventListener('change', atualizarVagas);
+</script>
+{% endblock %}

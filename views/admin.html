@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Admin · Gato-Café{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="h4 mb-0">Painel administrativo</h2>
+  <form method="post" action="{{ url_for('admin_logout') }}"><button class="btn btn-outline-cafe btn-sm">Sair</button></form>
+</div>
+<ul class="nav nav-tabs mb-4" id="abas">
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#lotacao" type="button">Lotação</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#adocao" type="button">Adoção</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pedidos" type="button">Pedidos</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#reservas" type="button">Reservas</button></li>
+</ul>
+<div class="tab-content">
+  <div class="tab-pane fade" id="lotacao">
+    <table class="table bg-white align-middle">
+      <thead><tr><th>Horário</th><th>Limite máximo de clientes</th></tr></thead>
+      {% for c in capacidades %}
+      <tr><td>{{ c.horario }}</td><td>
+        <form method="post" action="{{ url_for('admin_capacidade') }}" class="d-flex gap-2">
+          <input type="hidden" name="horario" value="{{ c.horario }}">
+          <input type="number" name="limite" min="1" max="100" value="{{ c.limite_maximo_clientes }}" class="form-control form-control-sm w-auto" aria-label="Limite às {{ c.horario }}">
+          <button class="btn btn-cafe btn-sm">Salvar</button>
+        </form></td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div class="tab-pane fade" id="adocao">
+    <table class="table bg-white align-middle">
+      <thead><tr><th>Gato</th><th>ONG</th><th>Status</th></tr></thead>
+      {% for g in gatos %}
+      <tr><td>{{ g.nome }}</td><td>{{ g.ong_parceira }}</td><td>
+        <form method="post" action="{{ url_for('admin_gato_status', gato_id=g.id) }}" class="d-flex gap-2">
+          <select name="status" class="form-select form-select-sm w-auto" aria-label="Status de {{ g.nome }}">
+            {% for s in status_opcoes %}<option {{ 'selected' if s == g.status_adocao }}>{{ s }}</option>{% endfor %}
+          </select>
+          <button class="btn btn-cafe btn-sm">Salvar</button>
+        </form></td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div class="tab-pane fade" id="pedidos">
+    <div class="table-responsive"><table class="table bg-white">
+      <thead><tr><th>#</th><th>Data</th><th>Cliente</th><th>Modalidade</th><th>Pagamento</th><th>Itens</th><th>Total</th></tr></thead>
+      {% for p in pedidos %}
+      <tr><td>{{ p.id }}</td><td>{{ p.criado_em }}</td><td>{{ p.cliente_nome }}<br><small class="text-muted">{{ p.telefone }}</small></td>
+        <td>{{ p.modalidade }}{% if p.endereco %}<br><small class="text-muted">{{ p.endereco }}</small>{% endif %}</td>
+        <td>{{ p.forma_pagamento }}</td>
+        <td>{% for i in p.itens %}{{ i.quantidade }}× {{ i.nome }}<br>{% endfor %}</td>
+        <td>{{ p.total|brl }}</td></tr>
+      {% else %}<tr><td colspan="7" class="text-muted">Nenhum pedido ainda.</td></tr>{% endfor %}
+    </table></div>
+  </div>
+  <div class="tab-pane fade" id="reservas">
+    <div class="table-responsive"><table class="table bg-white">
+      <thead><tr><th>#</th><th>Data</th><th>Horário</th><th>Cliente</th><th>Pessoas</th><th>Cat Fee</th></tr></thead>
+      {% for r in reservas %}
+      <tr><td>{{ r.id }}</td><td>{{ r.data_reserva }}</td><td>{{ r.horario }}</td><td>{{ r.cliente_nome }}<br><small class="text-muted">{{ r.telefone }}</small></td><td>{{ r.qtd_pessoas }}</td><td>{{ r.cat_fee_total|brl }}</td></tr>
+      {% else %}<tr><td colspan="6" class="text-muted">Nenhuma reserva ainda.</td></tr>{% endfor %}
+    </table></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const KEY = 'gatocafe.admin.aba';
+  const ini = location.hash.slice(1) || localStorage.getItem(KEY) || 'lotacao';
+  const alvo = document.getElementById(ini) ? ini : 'lotacao';
+  bootstrap.Tab.getOrCreateInstance(document.querySelector(`[data-bs-target="#${alvo}"]`)).show();
+  document.querySelectorAll('#abas [data-bs-toggle="tab"]').forEach(b =>
+    b.addEventListener('shown.bs.tab', e => {
+      const id = e.target.dataset.bsTarget.slice(1);
+      localStorage.setItem(KEY, id); history.replaceState(null, '', '#' + id);
+    }));
+</script>
+{% endblock %}
